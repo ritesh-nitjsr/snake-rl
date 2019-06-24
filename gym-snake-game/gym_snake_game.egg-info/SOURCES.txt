@@ -1,0 +1,6 @@
+setup.py
+gym_snake_game.egg-info/PKG-INFO
+gym_snake_game.egg-info/SOURCES.txt
+gym_snake_game.egg-info/dependency_links.txt
+gym_snake_game.egg-info/requires.txt
+gym_snake_game.egg-info/top_level.txt
