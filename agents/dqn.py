@@ -76,13 +76,14 @@ class DeepQNetworkAgent(object):
         state = np.array(state)
         return np.expand_dims(state, axis=0)
 
-    def train(self, discount_factor = 0.9):
+    def train(self, discount_factor = 0.9, eps_start = 1, eps_min = 0.05, eps_decay = 0.99):
+        eps = eps_start
         for episode in range(1, self.num_episodes+1):
             obs = self.env.reset()
             self.insert_last_frames(obs)
             state = self.get_state()
             loss = 0.0
-            eps = 1.0/episode
+            eps = max(eps*eps_decay,eps_min)
             fruits_eaten = 0
             timesteps_suvived = 0
             total_reward = 0
@@ -98,7 +99,7 @@ class DeepQNetworkAgent(object):
                     action = np.random.randint(self.env.num_actions)
                 else:
                     action = np.argmax((self.model.predict(state))[0])
-                
+
                 obs, reward, done, info = self.env.step(action)
                 total_reward = total_reward + reward
                 self.insert_last_frames(obs)
@@ -132,12 +133,12 @@ class DeepQNetworkAgent(object):
                 if(done or t>=1000):
                     if(done):
                         fruits_eaten = info['Total Fruits eaten']
-                        timesteps_suvived = info['Total timesteps suvived']
+                        timesteps_survived = info['Total timesteps suvived']
                     else:
                         fruits_eaten = -1
                         timesteps_survived = 1000
                     break
-            print("Episode : {} || Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} ".format(episode, loss, fruits_eaten, timesteps_suvived, total_reward))
+            print("Episode : {} || Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} ".format(episode, loss, fruits_eaten, timesteps_survived, total_reward))
 
     def take_action(self):
         pass
