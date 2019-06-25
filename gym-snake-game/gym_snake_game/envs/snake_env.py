@@ -1,6 +1,5 @@
 import gym
 from gym import error, spaces, utils
-from gym.envs.classic_control import rendering
 from collections import deque
 import random
 import time
@@ -140,15 +139,16 @@ class SnakeGameEnv(gym.Env):
         self.timesteps_suvived = 0
         self.sleep_time = 0
         if(interface=='gui'):
+            from gym.envs.classic_control import rendering
             self.sleep_time = 0.2
 
     def step(self, action):
-        time.sleep(self.sleep_time)
+        #time.sleep(self.sleep_time)
         observation = None
         reward = 0
         done = False
         info = None
-
+        
         if(action == SnakeAction.MAINTAIN_DIRECTION):
             next_head = self.snake_game.get_next_head(self.snake_game.current_direction)
 
@@ -235,7 +235,7 @@ class SnakeGameEnv(gym.Env):
             info = {'Total Fruits eaten' : self.fruits_eaten , 'Total timesteps suvived' : self.timesteps_suvived}
         else:
             self.timesteps_suvived = self.timesteps_suvived + 1
-
+        
         observation = self.snake_game.state
 
         return observation, reward, done, info

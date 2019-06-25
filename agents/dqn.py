@@ -6,6 +6,7 @@ from keras.models import load_model
 import numpy as np
 from collections import deque
 import random
+import time
 
 def get_model(env, num_frames):
     input = Input(shape = (num_frames, env.height, env.width))
@@ -97,7 +98,7 @@ class DeepQNetworkAgent(object):
                     action = np.random.randint(self.env.num_actions)
                 else:
                     action = np.argmax((self.model.predict(state))[0])
-
+                
                 obs, reward, done, info = self.env.step(action)
                 total_reward = total_reward + reward
                 self.insert_last_frames(obs)
@@ -122,15 +123,19 @@ class DeepQNetworkAgent(object):
                     if(done):
                         targets[i, action_t] = reward_t
                     else:
-                        Q_s_dash = self.model.predict(next_state_t)
+                        Q_s_dash = np.zeros(self.env.num_actions)
                         targets[i, action_t] = reward_t + discount_factor * np.max(Q_s_dash)
 
                 loss = loss + self.model.train_on_batch(inputs, targets)
                 t = t + 1
 
                 if(done or t>=1000):
-                    fruits_eaten = info['Total Fruits eaten']
-                    timesteps_suvived = info['Total timesteps suvived']
+                    if(done):
+                        fruits_eaten = info['Total Fruits eaten']
+                        timesteps_suvived = info['Total timesteps suvived']
+                    else:
+                        fruits_eaten = -1
+                        timesteps_survived = 1000
                     break
             print("Episode : {} || Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} ".format(episode, loss, fruits_eaten, timesteps_suvived, total_reward))
 
