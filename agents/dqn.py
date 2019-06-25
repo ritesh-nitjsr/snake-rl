@@ -76,7 +76,7 @@ class DeepQNetworkAgent(object):
         state = np.array(state)
         return np.expand_dims(state, axis=0)
 
-    def train(self, discount_factor = 0.9, eps_start = 1, eps_min = 0.05, eps_decay = 0.99):
+    def train(self, discount_factor = 0.9, eps_start = 1, eps_min = 0.05, eps_decay = 0.999):
         eps = eps_start
         for episode in range(1, self.num_episodes+1):
             obs = self.env.reset()
