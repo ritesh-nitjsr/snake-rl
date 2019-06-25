@@ -22,9 +22,9 @@ class SnakeAction(object):
     TURN_RIGHT = 2
 
 class Rewards(object):
-    EATEN_FRUIT = 15
+    EATEN_FRUIT = 100
     ALIVE = 0
-    DEAD = -5
+    DEAD = -20
 
 class Directions(object):
     NORTH = 0
@@ -143,7 +143,7 @@ class SnakeGameEnv(gym.Env):
         self.timesteps_suvived = 0
         self.sleep_time = 0
         if(interface=='gui'):
-            self.sleep_time = 0.2
+            self.sleep_time = 0.0
 
     def step(self, action):
         time.sleep(self.sleep_time)
@@ -251,8 +251,8 @@ class SnakeGameEnv(gym.Env):
         return observation
 
     def render(self, mode='human', close=False):
-        frame_height = 500
-        frame_width = 500
+        frame_height = 250
+        frame_width = 250
         wsf = frame_width/self.width
         hsf = frame_height/self.height
 

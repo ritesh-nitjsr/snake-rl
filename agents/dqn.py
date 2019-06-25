@@ -76,7 +76,7 @@ class DeepQNetworkAgent(object):
         state = np.array(state)
         return np.expand_dims(state, axis=0)
 
-    def train(self, discount_factor = 0.9, eps_start = 1, eps_min = 0.05, eps_decay = 0.999):
+    def train(self, discount_factor = 0.95, eps_start = 1, eps_min = 0.05, eps_decay = 0.9999):
         eps = eps_start
         for episode in range(1, self.num_episodes+1):
             obs = self.env.reset()
@@ -130,6 +130,8 @@ class DeepQNetworkAgent(object):
                 loss = loss + self.model.train_on_batch(inputs, targets)
                 t = t + 1
 
+
+
                 if(done or t>=1000):
                     if(done):
                         fruits_eaten = info['Total Fruits eaten']
@@ -138,7 +140,10 @@ class DeepQNetworkAgent(object):
                         fruits_eaten = -1
                         timesteps_survived = 1000
                     break
+            if((episode % (self.num_episodes/self.num_checkpoints)) == 0):
+                self.model.save('./saved_models/temp_dqn/dqn-{:08d}.model'.format(episode))
             print("Episode : {} || Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} ".format(episode, loss, fruits_eaten, timesteps_survived, total_reward))
+        self.model.save('./saved_models/model/temp_dqn/dqn-final.model')
 
     def take_action(self):
         pass
