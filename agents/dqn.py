@@ -142,8 +142,11 @@ class DeepQNetworkAgent(object):
                     break
             if((episode % (self.num_episodes/self.num_checkpoints)) == 0):
                 self.model.save('./saved_models/temp_dqn/dqn-{:08d}.model'.format(episode))
-            print("Episode : {} || Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} ".format(episode, loss, fruits_eaten, timesteps_survived, total_reward))
-        self.model.save('./saved_models/model/temp_dqn/dqn-final.model')
+            print("Episode : {} || Average Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} ".format(episode, loss/t, fruits_eaten, timesteps_survived, total_reward))
+        self.model.save('./saved_models/temp_dqn/dqn-final.model')
 
-    def take_action(self):
-        pass
+    def take_action(self, obs):
+        self.insert_last_frames(obs)
+        state = self.get_state()
+        action = np.argmax(self.model.predict(state))
+        return action

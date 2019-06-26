@@ -143,7 +143,7 @@ class SnakeGameEnv(gym.Env):
         self.timesteps_suvived = 0
         self.sleep_time = 0
         if(interface=='gui'):
-            self.sleep_time = 0.0
+            self.sleep_time = 0.2
 
     def step(self, action):
         time.sleep(self.sleep_time)
