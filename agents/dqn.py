@@ -14,10 +14,10 @@ def get_model(env, num_frames):
     X = Conv2D(32, kernel_size=(3, 3), strides=(1, 1), activation='relu', data_format='channels_first')(X)
     X = Flatten()(X)
     X = Dense(256, activation='relu')(X)
-    X = Dense(env.num_actions, activation='sigmoid')(X)
+    X = Dense(env.num_actions)(X)
     model = Model(inputs = input, outputs = X, name = 'CNN')
     model.summary()
-    model.compile(optimizer=RMSprop(), loss='mse')
+    model.compile(optimizer=Adam(), loss='mse')
     return model
 
 class Memory(object):
@@ -87,8 +87,8 @@ class DeepQNetworkAgent(object):
             fruits_eaten = 0
             timesteps_suvived = 0
             total_reward = 0
-
             t = 0
+            action_counts = np.zeros(self.env.num_actions)
 
             while(1):
                 if(self.interface == 'gui'):
@@ -98,8 +98,11 @@ class DeepQNetworkAgent(object):
                 if(eps_i < eps):
                     action = np.random.randint(self.env.num_actions)
                 else:
-                    action = np.argmax((self.model.predict(state))[0])
+                    prediction = self.model.predict(state)
+                    #print(prediction)
+                    action = np.argmax(prediction[0])
 
+                action_counts[action] = action_counts[action] + 1
                 obs, reward, done, info = self.env.step(action)
                 total_reward = total_reward + reward
                 self.insert_last_frames(obs)
@@ -112,7 +115,7 @@ class DeepQNetworkAgent(object):
                 targets = np.zeros((batch_size, self.env.num_actions))
 
                 for i,record in enumerate(batch):
-                    inputs[i] = record['state']
+                    inputs[i:i+1] = record['state']
                     state_t = record['state']
                     action_t = record['action']
                     reward_t = record['reward']
@@ -124,13 +127,10 @@ class DeepQNetworkAgent(object):
                     if(done):
                         targets[i, action_t] = reward_t
                     else:
-                        Q_s_dash = np.zeros(self.env.num_actions)
+                        Q_s_dash = self.model.predict(next_state_t)
                         targets[i, action_t] = reward_t + discount_factor * np.max(Q_s_dash)
-
                 loss = loss + self.model.train_on_batch(inputs, targets)
                 t = t + 1
-
-
 
                 if(done or t>=1000):
                     if(done):
@@ -141,9 +141,9 @@ class DeepQNetworkAgent(object):
                         timesteps_survived = 1000
                     break
             if((episode % (self.num_episodes/self.num_checkpoints)) == 0):
-                self.model.save('./saved_models/temp_dqn/dqn-{:08d}.model'.format(episode))
-            print("Episode : {} || Average Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} ".format(episode, loss/t, fruits_eaten, timesteps_survived, total_reward))
-        self.model.save('./saved_models/temp_dqn/dqn-final.model')
+                self.model.save('./saved_models/temp_dqn/dqn-{:06d}.model'.format(episode))
+            print("Episode : {} || Epsilon : {} || Average Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} || Action counts : {}".format(episode, eps, loss/t, fruits_eaten, timesteps_survived, total_reward, action_counts))
+        self.model.save('./saved_models/dqn-final.model')
 
     def take_action(self, obs):
         self.insert_last_frames(obs)
