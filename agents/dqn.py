@@ -30,15 +30,22 @@ class Memory(object):
         self.memory_store = deque()
 
     def add_record(self, state, action, reward, next_state, done):
+        record_obj = np.array([state, action, reward, next_state, done])
+        self.memory_store.append(record_obj)
+        if( len(self.memory_store) >  self.memory_size ):
+            self.memory_store.popleft()
+        '''
         record_obj = {'state' : state, 'action' : action, 'reward' : reward, 'next_state' : next_state, 'done' : done}
         self.memory_store.append(record_obj)
         if( len(self.memory_store) >  self.memory_size ):
             self.memory_store.popleft()
+        '''
 
     def get_batch(self, batch_size):
         batch_size = min(batch_size, len(self.memory_store))
         batch = random.sample(self.memory_store, batch_size)
-        return batch, batch_size
+        return np.array(batch), batch_size
+
 
 
 class DeepQNetworkAgent(object):
@@ -86,6 +93,7 @@ class DeepQNetworkAgent(object):
                 if(self.interface == 'gui'):
                     self.env.render()
                 eps_i = np.random.random(1)[0]
+
                 if(eps_i < eps):
                     action = np.random.randint(self.env.num_actions)
                 else:
@@ -97,19 +105,25 @@ class DeepQNetworkAgent(object):
                 temp = np.array(self.frames)
                 obs, reward, done, info = self.env.step(action)
                 self.frames = np.array(temp)
-                #print(action)
-                #print(obs)
                 total_reward = total_reward + reward
-                #frames = np.append(frames[1:], np.expand_dims(obs, axis = 0), axis = 0)
-                #next_state =  np.expand_dims(frames,0)
                 next_state = self.get_state(obs)
                 self.memory.add_record(state, action, reward, next_state, done)
                 state = next_state
-                #print(state,action,reward,next_state,done)
-                #print("--- next ---")
 
                 batch, batch_size = self.memory.get_batch(self.batch_size)
 
+                batch_states = np.stack(batch[:,0], axis=0).reshape((batch_size, self.num_frames, self.env.height, self.env.width))
+                batch_actions = batch[:,1]
+                batch_rewards = batch[:,2]
+                batch_next_states = np.stack(batch[:,3], axis=0).reshape((batch_size, self.num_frames, self.env.height, self.env.width))
+                batch_done = batch[:,4]
+
+                inputs = batch_states
+                targets = self.model.predict(batch_states)
+                Q_next_states = self.model.predict(batch_next_states)
+                targets[np.arange(batch_size), list(batch_actions)] = batch_rewards + (1 - batch_done) * discount_factor * np.max(Q_next_states, axis=1)
+                
+                '''
                 inputs = np.zeros((batch_size,  self.num_frames, self.env.height, self.env.width))
                 targets = np.zeros((batch_size, self.env.num_actions))
 
@@ -128,6 +142,8 @@ class DeepQNetworkAgent(object):
                     else:
                         Q_s_dash = self.model.predict(next_state_t)
                         targets[i, action_t] = reward_t + discount_factor * np.max(Q_s_dash)
+                '''
+
                 loss = loss + self.model.train_on_batch(inputs, targets)
                 t = t + 1
 

@@ -149,7 +149,7 @@ class SnakeGameEnv(gym.Env):
         time.sleep(self.sleep_time)
         observation = None
         reward = 0
-        done = False
+        done = 0
         info = None
 
         if(action == SnakeAction.MAINTAIN_DIRECTION):
@@ -167,7 +167,7 @@ class SnakeGameEnv(gym.Env):
             else:
                 self.snake_game.add_head(next_head)
                 self.snake_game.remove_tail()
-                done = True
+                done = 1
                 reward = Rewards.DEAD
 
         elif(action == SnakeAction.TURN_LEFT):
@@ -199,7 +199,7 @@ class SnakeGameEnv(gym.Env):
             else:
                 self.snake_game.add_head(next_head)
                 self.snake_game.remove_tail()
-                done = True
+                done = 1
                 reward = Rewards.DEAD
 
         else:
@@ -231,7 +231,7 @@ class SnakeGameEnv(gym.Env):
             else:
                 self.snake_game.add_head(next_head)
                 self.snake_game.remove_tail()
-                done = True
+                done = 1
                 reward = Rewards.DEAD
 
         if(done):
