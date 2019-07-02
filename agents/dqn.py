@@ -14,10 +14,10 @@ def get_model(env, num_frames):
     X = Conv2D(32, kernel_size=(3, 3), strides=(1, 1), activation='relu', data_format='channels_first')(X)
     X = Flatten()(X)
     X = Dense(256, activation='relu')(X)
-    X = Dense(env.num_actions)(X)
+    X = Dense(env.num_actions, activation='sigmoid')(X)
     model = Model(inputs = input, outputs = X, name = 'CNN')
     model.summary()
-    model.compile(optimizer=Adam(), loss='mse')
+    model.compile(optimizer=RMSprop(), loss='mse')
     return model
 
 class Memory(object):
@@ -49,41 +49,33 @@ class DeepQNetworkAgent(object):
         self.num_frames = num_frames
         self.num_checkpoints = num_checkpoints
         self.batch_size = batch_size
-        self.frames = deque()
+        self.frames = None
         self.interface = interface
 
         if(train):
             self.model = get_model(self.env, self.num_frames)
             self.memory = Memory(self.memory_size, self.num_frames)
-            self.train()
+
         else:
             self.model = load_model(model)
 
-    def insert_last_frames(self, observation):
-        if(len(self.frames) == self.num_frames):
-            self.frames.popleft()
-        self.frames.append(observation)
+    def get_state(self, obs):
+        if(self.frames is None):
+            self.frames = [obs] * self.num_frames
+        else:
+            self.frames = np.append(self.frames[1:], np.expand_dims(obs,0), axis = 0)
+        return np.expand_dims(self.frames, 0)
 
-
-    def get_state(self):
-        state = []
-        for frame in self.frames:
-            state.append(frame)
-        if(len(state) < self.num_frames):
-            last_frame = state[-1]
-            for _ in range(self.num_frames - len(state)):
-                state.append(last_frame)
-        state = np.array(state)
-        return np.expand_dims(state, axis=0)
-
-    def train(self, discount_factor = 0.95, eps_start = 1, eps_min = 0.05, eps_decay = 0.9999):
+    def train(self, discount_factor = 0.9, eps_start = 1, eps_min = 0.1, exploration_phase_size = 0.5):
         eps = eps_start
+        eps_decay = (eps_start - eps_min)/(self.num_episodes * exploration_phase_size)
         for episode in range(1, self.num_episodes+1):
+            self.frames = None
             obs = self.env.reset()
-            self.insert_last_frames(obs)
-            state = self.get_state()
+            #self.frames = [observation] * self.num_frames
+            state = self.get_state(obs)
+            #state = np.expand_dims(frames,0)
             loss = 0.0
-            eps = max(eps*eps_decay,eps_min)
             fruits_eaten = 0
             timesteps_suvived = 0
             total_reward = 0
@@ -94,7 +86,6 @@ class DeepQNetworkAgent(object):
                 if(self.interface == 'gui'):
                     self.env.render()
                 eps_i = np.random.random(1)[0]
-
                 if(eps_i < eps):
                     action = np.random.randint(self.env.num_actions)
                 else:
@@ -103,11 +94,19 @@ class DeepQNetworkAgent(object):
                     action = np.argmax(prediction[0])
 
                 action_counts[action] = action_counts[action] + 1
+                temp = np.array(self.frames)
                 obs, reward, done, info = self.env.step(action)
+                self.frames = np.array(temp)
+                #print(action)
+                #print(obs)
                 total_reward = total_reward + reward
-                self.insert_last_frames(obs)
-                next_state =  self.get_state()
+                #frames = np.append(frames[1:], np.expand_dims(obs, axis = 0), axis = 0)
+                #next_state =  np.expand_dims(frames,0)
+                next_state = self.get_state(obs)
                 self.memory.add_record(state, action, reward, next_state, done)
+                state = next_state
+                #print(state,action,reward,next_state,done)
+                #print("--- next ---")
 
                 batch, batch_size = self.memory.get_batch(self.batch_size)
 
@@ -140,13 +139,16 @@ class DeepQNetworkAgent(object):
                         fruits_eaten = -1
                         timesteps_survived = 1000
                     break
+
+
             if((episode % (self.num_episodes/self.num_checkpoints)) == 0):
                 self.model.save('./saved_models/temp_dqn/dqn-{:06d}.model'.format(episode))
-            print("Episode : {} || Epsilon : {} || Average Loss : {} ||  Fruits eaten : {} || Timesteps survived : {} || Total reward : {} || Action counts : {}".format(episode, eps, loss/t, fruits_eaten, timesteps_survived, total_reward, action_counts))
+            print("Episode : {:6d} || Epsilon : {:2.2f} || Average Loss : {:8.2f} ||  Fruits eaten : {:3d} || Timesteps survived : {:4d} || Total reward : {:5d} || Action counts : {}".format(episode, eps, loss/t, fruits_eaten, timesteps_survived, total_reward, action_counts))
+            if(eps > eps_min):
+                eps = eps - eps_decay
         self.model.save('./saved_models/dqn-final.model')
 
     def take_action(self, obs):
-        self.insert_last_frames(obs)
-        state = self.get_state()
+        state = self.get_state(obs)
         action = np.argmax(self.model.predict(state))
         return action
