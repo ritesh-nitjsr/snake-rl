@@ -4,7 +4,7 @@ import gym_snake_game
 import argparse
 from agents import DeepQNetworkAgent
 
-DQN_MODEL_PATH = 'dqn-final.model'
+DQN_MODEL_PATH = './saved_models/dqn-final.model'
 TRAIN_EPISODES = 50000
 TEST_EPISODES = 100
 NUM_FRAMES = 4
