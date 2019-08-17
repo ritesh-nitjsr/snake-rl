@@ -9,13 +9,14 @@ import random
 import time
 
 def get_model(env, num_frames):
-    input = Input(shape = (num_frames, env.height, env.width))
-    X = Conv2D(16, kernel_size=(3, 3), strides=(1, 1), activation='relu', data_format='channels_first')(input)
+    inp = Input(shape = (num_frames, env.height, env.width))
+    X = Conv2D(16, kernel_size=(3, 3), strides=(1, 1), activation='relu', data_format='channels_first')(inp)
     X = Conv2D(32, kernel_size=(3, 3), strides=(1, 1), activation='relu', data_format='channels_first')(X)
+    X = Conv2D(64, kernel_size=(3, 3), strides=(1, 1), activation='relu', data_format='channels_first')(X)
     X = Flatten()(X)
     X = Dense(256, activation='relu')(X)
-    X = Dense(env.num_actions, activation='sigmoid')(X)
-    model = Model(inputs = input, outputs = X, name = 'CNN')
+    X = Dense(env.num_actions)(X)
+    model = Model(inputs = inp, outputs = X, name = 'dqn')
     model.summary()
     model.compile(optimizer=RMSprop(), loss='mse')
     return model
@@ -30,6 +31,7 @@ class Memory(object):
         self.memory_store = deque()
 
     def add_record(self, state, action, reward, next_state, done):
+        '''
         record_obj = np.array([state, action, reward, next_state, done])
         self.memory_store.append(record_obj)
         if( len(self.memory_store) >  self.memory_size ):
@@ -39,7 +41,7 @@ class Memory(object):
         self.memory_store.append(record_obj)
         if( len(self.memory_store) >  self.memory_size ):
             self.memory_store.popleft()
-        '''
+        
 
     def get_batch(self, batch_size):
         batch_size = min(batch_size, len(self.memory_store))
@@ -70,10 +72,10 @@ class DeepQNetworkAgent(object):
         if(self.frames is None):
             self.frames = [obs] * self.num_frames
         else:
-            self.frames = np.append(self.frames[1:], np.expand_dims(obs,0), axis = 0)
+            self.frames = np.append( np.expand_dims(obs,0), self.frames[:3], axis = 0)
         return np.expand_dims(self.frames, 0)
 
-    def train(self, discount_factor = 0.9, eps_start = 1, eps_min = 0.1, exploration_phase_size = 0.5):
+    def train(self, discount_factor = 0.9, eps_start = 1, eps_min = 0.1, exploration_phase_size = 0.3):
         eps = eps_start
         eps_decay = (eps_start - eps_min)/(self.num_episodes * exploration_phase_size)
         for episode in range(1, self.num_episodes+1):
@@ -107,11 +109,13 @@ class DeepQNetworkAgent(object):
                 self.frames = np.array(temp)
                 total_reward = total_reward + reward
                 next_state = self.get_state(obs)
+#                 print(state, action, reward, next_state)
                 self.memory.add_record(state, action, reward, next_state, done)
                 state = next_state
 
                 batch, batch_size = self.memory.get_batch(self.batch_size)
-
+                
+                '''
                 batch_states = np.stack(batch[:,0], axis=0).reshape((batch_size, self.num_frames, self.env.height, self.env.width))
                 batch_actions = batch[:,1]
                 batch_rewards = batch[:,2]
@@ -142,7 +146,7 @@ class DeepQNetworkAgent(object):
                     else:
                         Q_s_dash = self.model.predict(next_state_t)
                         targets[i, action_t] = reward_t + discount_factor * np.max(Q_s_dash)
-                '''
+                
 
                 loss = loss + self.model.train_on_batch(inputs, targets)
                 t = t + 1
@@ -157,7 +161,7 @@ class DeepQNetworkAgent(object):
                     break
 
 
-            if((episode % (self.num_episodes/self.num_checkpoints)) == 0):
+            if(self.num_checkpoints!=0  and (episode % (self.num_episodes/self.num_checkpoints)) == 0):
                 self.model.save('./saved_models/temp_dqn/dqn-{:06d}.model'.format(episode))
             print("Episode : {:6d} || Epsilon : {:2.2f} || Average Loss : {:8.2f} ||  Fruits eaten : {:3d} || Timesteps survived : {:4d} || Total reward : {:5d} || Action counts : {}".format(episode, eps, loss/t, fruits_eaten, timesteps_survived, total_reward, action_counts))
             if(eps > eps_min):

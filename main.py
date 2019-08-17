@@ -5,12 +5,12 @@ import argparse
 from agents import DeepQNetworkAgent
 
 DQN_MODEL_PATH = 'dqn-final.model'
-TRAIN_EPISODES = 60000
+TRAIN_EPISODES = 50000
 TEST_EPISODES = 100
 NUM_FRAMES = 4
 MEMORY_SIZE = 1000
 NUM_CHECKPOINTS = 10
-BATCH_SIZE = 50
+BATCH_SIZE = 8
 
 
 

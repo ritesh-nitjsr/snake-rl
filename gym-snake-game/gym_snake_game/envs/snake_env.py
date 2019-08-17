@@ -24,7 +24,7 @@ class SnakeAction(object):
 class Rewards(object):
     EATEN_FRUIT = 100
     ALIVE = 0
-    DEAD = -20
+    DEAD = -50
 
 class Directions(object):
     NORTH = 0
